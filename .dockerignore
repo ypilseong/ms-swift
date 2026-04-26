@@ -1,0 +1,13 @@
+models/
+saves/
+logs/
+wandb/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.tox/

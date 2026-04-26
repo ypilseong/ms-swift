@@ -165,6 +165,9 @@ class TrainArgumentsMixin:
     loss_type: Optional[str] = field(default=None, metadata={'help': f'loss_func choices: {list(loss_map.keys())}'})
     eval_metric: Optional[str] = None
     callbacks: List[str] = field(default_factory=list)
+    save_steps_list: Optional[List[int]] = field(
+        default=None,
+        metadata={'help': 'Save checkpoints at specific steps. Overrides save_steps when provided as a list in YAML.'})
     # early_step
     early_stop_interval: Optional[int] = None
 
@@ -225,6 +228,8 @@ class TrainArgumentsMixin:
                 logger.warning('Failed to patch liger_kernel')
 
     def _init_callbacks(self):
+        if self.save_steps_list:
+            self.callbacks.append('save_steps_list')
         if self.lisa_activated_layers > 0:
             self.callbacks.append('lisa')
         if self.tuner_type == 'adalora':

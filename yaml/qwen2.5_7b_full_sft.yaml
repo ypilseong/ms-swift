@@ -1,0 +1,30 @@
+### model
+model: models/Qwen3.5-4B    # 모델 경로 (로컬) 또는 HuggingFace/ModelScope ID
+torch_dtype: bfloat16
+
+### method
+tuner_type: full                       # full / lora / freeze
+
+### dataset
+dataset:
+  - data/opus-4.7-reasoning-cot.json              # 로컬 데이터 경로 또는 ModelScope Hub ID
+max_length: 2048
+dataset_num_proc: 4
+
+### output
+output_dir: saves/qwen3.5-4b/full/sft
+logging_steps: 10
+save_steps: 100
+save_total_limit: 5
+report_to: none                        # none / wandb / tensorboard / swanlab
+
+### train
+num_train_epochs: 3
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 1
+learning_rate: 1.0e-5
+gradient_accumulation_steps: 2
+lr_scheduler_type: cosine
+warmup_ratio: 0.05
+dataloader_num_workers: 4
+deepspeed: zero3                       # zero0 / zero1 / zero2 / zero3 / zero2_offload

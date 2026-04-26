@@ -54,6 +54,12 @@ def parse_yaml_args(argv):
     if env:
         for k, v in env.items():
             os.environ[k] = str(v)
+
+    # Pre-process: if save_steps is a list, move to save_steps_list and disable default saving
+    if isinstance(config.get('save_steps'), list):
+        config['save_steps_list'] = config['save_steps']
+        config['save_steps'] = 999999999
+
     config_argv = []
     for k, v in config.items():
         config_argv.append(f'--{k}')

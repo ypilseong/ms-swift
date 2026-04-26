@@ -154,3 +154,10 @@ megatron_output/
 
 # ast template
 ast_index_file.py
+
+# Training artifacts (large files, machine-specific)
+/models/
+/saves/
+/logs/
+
+.claude/

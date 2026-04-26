@@ -1,0 +1,25 @@
+services:
+  ms-swift:
+    build:
+      dockerfile: ./docker/docker-cuda/Dockerfile
+      context: ../..
+      args:
+        PIP_INDEX: https://pypi.org/simple
+    container_name: ms-swift
+    ipc: host
+    tty: true
+    stdin_open: true
+    command: bash -c "tail -f /dev/null"
+    environment:
+      - WANDB_API_KEY=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
+      - WANDB_ENTITY=<본인의 wandb 팀 또는 조직명>
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: "all"
+            capabilities: [ gpu ]
+    volumes:
+      - ../..:/app          # 프로젝트 루트를 컨테이너 /app에 마운트
+    restart: unless-stopped
