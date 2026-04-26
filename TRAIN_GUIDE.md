@@ -18,7 +18,7 @@ ms-swift/
 ├── data/                        # 학습 데이터 파일
 │   └── my_dataset.json
 ├── models/                      # 로컬 모델 저장 위치 (볼륨 마운트, 이미지 제외)
-│   └── Qwen2.5-7B-Instruct/
+│   └── Qwen3.5-4B/
 ├── saves/                       # 학습 완료 체크포인트 저장 위치 (볼륨 마운트, 이미지 제외)
 ├── yaml/                        # 학습 설정 파일 모음
 │   └── qwen2.5_7b_full_sft.yaml
@@ -90,6 +90,12 @@ services:
 | `restart: unless-stopped` | 컨테이너 비정상 종료 시 자동 재시작 |
 
 > **볼륨 마운트**: 호스트의 `models/`, `data/`, `yaml/`, `saves/`, `logs/` 등이 컨테이너 내부 `/app/`에 실시간으로 반영됩니다.
+
+> **환경변수 변경 시 주의**: `WANDB_API_KEY` 등 docker-compose.yml의 환경변수를 수정한 경우, 컨테이너를 반드시 재시작해야 반영됩니다.
+> ```bash
+> docker compose -f docker/docker-cuda/docker-compose.yml down
+> docker compose -f docker/docker-cuda/docker-compose.yml up -d
+> ```
 
 ---
 
@@ -169,25 +175,24 @@ yaml 파일은 `yaml/` 폴더에 저장합니다.
 
 ```yaml
 ### model
-model: models/Qwen2.5-7B-Instruct    # 로컬 경로 또는 Hub ID
+model: models/Qwen3.5-4B          # 로컬 경로 또는 Hub ID
 torch_dtype: bfloat16
 
 ### method
-tuner_type: full                      # full / lora / freeze / adalora
+tuner_type: full                   # full / lora / freeze / adalora
 
 ### dataset
 dataset:
   - data/my_dataset.json
-max_length: 2048                      # 최대 토큰 길이
+max_length: 2048                   # 최대 토큰 길이
 dataset_num_proc: 4
 
 ### output
-output_dir: saves/qwen2.5-7b/full/sft
+output_dir: saves/qwen3.5-4b/full/sft
 logging_steps: 10
-save_steps: 100
-save_total_limit: 5                   # 최대 저장 체크포인트 수
-report_to: wandb                      # none / wandb / tensorboard / swanlab
-overwrite_output_dir: true
+save_steps: 100                    # 단일 정수: N 스텝마다 저장
+save_total_limit: 5                # 최대 저장 체크포인트 수
+report_to: none                    # none / wandb / tensorboard / swanlab
 
 ### train
 num_train_epochs: 3
@@ -195,11 +200,47 @@ per_device_train_batch_size: 1
 per_device_eval_batch_size: 1
 learning_rate: 1.0e-5
 gradient_accumulation_steps: 2
-lr_scheduler_type: cosine             # cosine / linear / constant
+lr_scheduler_type: cosine          # cosine / linear / constant
 warmup_ratio: 0.05
 dataloader_num_workers: 4
-deepspeed: zero3                      # zero0 / zero1 / zero2 / zero3 / zero2_offload
+deepspeed: zero3                   # zero0 / zero1 / zero2 / zero3 / zero2_offload
 ```
+
+### save_steps 설정
+
+#### 단일 정수 (기본) — N 스텝마다 주기적으로 저장
+
+```yaml
+save_steps: 500
+```
+
+#### 리스트 — 특정 스텝에서만 저장
+
+```yaml
+save_steps:
+  - 100
+  - 300
+  - 500
+```
+
+리스트로 지정하면 해당 스텝에서만 체크포인트를 저장합니다. 학습 종료 시점에는 항상 저장됩니다.
+
+### wandb 로깅 설정
+
+```yaml
+report_to: wandb
+```
+
+wandb를 사용하려면 `docker/docker-cuda/docker-compose.yml`에 API 키를 먼저 설정해야 합니다.
+
+```yaml
+environment:
+  - WANDB_API_KEY=실제_API_키_입력
+  - WANDB_ENTITY=wandb_팀_또는_조직명
+```
+
+> **주의**: API 키를 변경한 후 반드시 컨테이너를 재시작해야 반영됩니다.
+> wandb API 키는 [wandb.ai/settings](https://wandb.ai/settings)에서 발급합니다.
 
 ### tuner_type 비교
 
@@ -231,7 +272,7 @@ target_modules: all-linear
 ### 체크포인트에서 재개
 
 ```yaml
-resume_from_checkpoint: saves/qwen2.5-7b/full/sft/checkpoint-300
+resume_from_checkpoint: saves/qwen3.5-4b/full/sft/checkpoint-300
 ```
 
 ---
@@ -300,6 +341,10 @@ docker compose -f docker/docker-cuda/docker-compose.yml up -d
 # 컨테이너 중지 및 제거
 docker compose -f docker/docker-cuda/docker-compose.yml down
 
+# 컨테이너 재시작 (환경변수 변경 후 필수)
+docker compose -f docker/docker-cuda/docker-compose.yml down && \
+docker compose -f docker/docker-cuda/docker-compose.yml up -d
+
 # 컨테이너 접속
 docker exec -it ms-swift bash
 
@@ -345,5 +390,5 @@ nvidia-smi --query-gpu=memory.used,memory.total --format=csv
 ### LoRA 모델 병합 (학습 후)
 
 ```bash
-swift merge-lora --model models/Qwen2.5-7B-Instruct --adapter_path saves/qwen2.5-7b/lora/sft/checkpoint-500
+swift merge-lora --model models/Qwen3.5-4B --adapter_path saves/qwen3.5-4b/lora/sft/checkpoint-500
 ```
